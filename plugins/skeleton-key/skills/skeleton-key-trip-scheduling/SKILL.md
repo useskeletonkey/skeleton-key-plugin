@@ -35,13 +35,16 @@ Two principles frame everything below:
 
 1. **Check tools.** If the Skeleton Key tools aren't available, see "If the tools aren't
    connected" — do not fake the full workflow without them.
-2. **Gather trip facts** (Step 1 below).
-3. **Establish the trip profile** (Step 2) — recall a saved one or run the intake. Do this
+2. **Check the dates.** Compare the trip's `endDate` from `list_trips` against today's date. If
+   the trip is already over, this is recording, not planning — jump to "Recording a trip that
+   already happened" and skip steps 3–8.
+3. **Gather trip facts** (Step 1 below).
+4. **Establish the trip profile** (Step 2) — recall a saved one or run the intake. Do this
    BEFORE drafting any schedule, even a "rough" one.
-4. **Draft days**: profile dials + fixed methodology.
-5. **Verify** every multi-room or day-trip day with `evaluate_schedule`; fix or flag, never fudge.
-6. **Present** with per-time provenance labels, tradeoff flags, and open questions.
-7. **Booking order**, when it comes up: priority × scarcity, after asking the booking-risk
+5. **Draft days**: profile dials + fixed methodology.
+6. **Verify** every multi-room or day-trip day with `evaluate_schedule`; fix or flag, never fudge.
+7. **Present** with per-time provenance labels, tradeoff flags, and open questions.
+8. **Booking order**, when it comes up: priority × scarcity, after asking the booking-risk
    question (a just-in-time question, not part of intake).
 
 ## Step 1 — Trip facts
@@ -189,8 +192,12 @@ day-trip day before presenting. Check: each start is a real slot; previous room'
 buffer ≤ next start; the day's own transport (drive/train each way) is a real block, not
 ignored. Treat any verdict other than `feasible` / `feasible_provisional` as a day you must fix
 (move to other real slots or drop a room and flag it) — never fudge. On `indeterminate`
-(uncached travel legs), call `warm_travel` on the same draft and re-evaluate. It does not check
-player minimums — that arithmetic is yours.
+(uncached travel legs), call `warm_travel` on the same draft and re-evaluate — once. Transit
+legs cannot be warmed, so when `warm_travel` comes back reporting those legs in `unwarmable` /
+`unwarmablePairs`, the verdict will stay `indeterminate` no matter how many times you re-run it:
+accept it, present the day with its transit legs flagged as unverified, and move on. Never loop
+warm-then-evaluate on legs the tool already told you it can't warm. It does not check player
+minimums — that arithmetic is yours.
 
 ### Meals are schedule items, not leftovers
 
@@ -231,13 +238,15 @@ it.
 
 ### Confirmed vs. projected — strictly from the slot's source
 
-`source: "projected"` (and provisional slots) are read-only estimates for dates the venue hasn't
-released; a provider name or `manual` is a real, bookable slot. Never infer "confirmed" from
-times merely appearing. Label every proposed time confirmed vs. projected. Projected rooms can
-be *planned* (place them, hold the space) but not *booked* — "not yet released" is a hard gate
-on booking order, independent of priority: book the confirmed scarce rooms now, and set the
-projected high-priority ones aside to book the moment availability opens. Don't downgrade a
-strong room for being projected — plan it, flag it pending.
+`source: "projected"` (and provisional slots) are read-only estimates for future dates the venue
+hasn't released — never generated for a date that has already passed, though one written while
+the date was still ahead can linger on a trip nothing refreshes any more. A provider name or
+`manual` is a real, bookable slot. Never infer "confirmed" from times merely appearing. Label
+every proposed time confirmed vs. projected. Projected rooms can be *planned* (place them, hold
+the space) but not *booked* — "not yet released" is a hard gate on booking order, independent of
+priority: book the confirmed scarce rooms now, and set the projected high-priority ones aside to
+book the moment availability opens. Don't downgrade a strong room for being projected — plan it,
+flag it pending.
 
 ### Comments are first-class input
 
@@ -304,7 +313,10 @@ rooms) — a guide for ordering, never an override of a stated priority or of re
 
 ## Operating the Skeleton Key tools
 
-- `create_trip` / `update_trip` — dates, region, travel buffer (15-min default).
+- `create_trip` / `update_trip` — dates, region, travel buffer (15-min default). Past dates are
+  allowed and mean recording (see Recording a trip that already happened).
+- `copy_trip` — run an old trip again at new dates: `mode: "games"` for the pool alone,
+  `mode: "layout"` for the whole day-by-day itinerary shifted onto the new dates.
 - `add_cluster` — encode geographic day-groupings (remember: address beats cluster).
 - `schedule_game` / `move_game` / `pin_time` — lay rooms onto days; pin only real slot times.
 - `update_scheduled_game` — per-leg `travelMode` and buffer overrides to match the profile.
@@ -315,6 +327,9 @@ rooms) — a guide for ordering, never an override of a stated priority or of re
 - `list_games` — the schedulable pool; hides cut games by default (pass `includeCut` to audit
   what was set aside — see Cut games).
 - `list_game_slots` — the only legitimate source of pinnable times.
+- `set_game_slots` / `add_game_slot` — write times the user tells you (a whole date at once, or
+  one time) onto any date inside the trip window, past dates included. The only writable slot
+  source; provider-imported times are read-only.
 - `list_game_comments` — honor member intent (see Comments).
 - `evaluate_schedule` / `warm_travel` — the required verification pair (see Verify).
 - `list_days` / `get_trip_summary` — review the interleaved schedule and per-day load.
@@ -322,6 +337,92 @@ rooms) — a guide for ordering, never an override of a stated priority or of re
 In a read-only context ("propose, don't change anything"), the full workflow still applies:
 every `list_*`/`get_*` tool, `evaluate_schedule` (stateless), and `warm_travel` (cache-only) are
 safe; present the proposal instead of writing it.
+
+## Recording a trip that already happened
+
+Not every trip is ahead of the user. Sometimes the trip is over and they want it written down —
+which rooms they played, when, what it cost — so it sits alongside the rest of their trips. That
+is **recording**, and most of this skill does not apply to it.
+
+**Recognize it from the dates, not from memory.** Read the trip's `endDate` off `list_trips` (or
+`get_trip`) and compare it against today's date as established in this conversation. Don't infer
+the answer from the trip's name — "Austin 2024" may be a trip taken, a trip being planned, or a
+name nobody updated. And don't assume you know today's date: if the conversation hasn't
+established it, ask ("is this trip already over, or still ahead?") rather than picking one. A
+trip whose `endDate` is before today is past; a trip that spans today is live and still plans
+normally — though its days that are already behind you are records too, and everything below
+applies to those days.
+
+Once the trip is past:
+
+- **Skip the trip profile intake entirely.** Step 2 exists to shape days that haven't happened
+  yet. Asking someone which day shape they want for a weekend they already lived — or whether
+  three rooms in a day is too many — is noise. The just-in-time questions go too: a late finish
+  that already happened is not a decision anyone can make.
+- **Skip booking pressure and booking order.** `bookingPressure` reads how hard a room is to
+  book right now; it says nothing about a room played last March, and it is not refreshed for a
+  trip that is over. Don't sequence a recorded trip by priority × scarcity, and don't tell the
+  user to book anything early. "The Vault is `high` pressure, book it first" is nonsense advice
+  about a room they already played.
+- **Record the real times, then pin them.** No availability import runs for a trip that is over,
+  and projections are never generated for a past date, so what the user remembers (or has in
+  their confirmation emails) is the only source of times. Write those times with `set_game_slots`
+  (the whole date at once: `times: ["10:00", "13:30"]`) or `add_game_slot` (one at a time), then
+  `pin_time` the scheduled game to the slot you just recorded. That is how "pin only real times"
+  stays satisfiable here: a recorded time is a real time, it just came from the user instead of
+  the venue's booking page. If they only remember "sometime that afternoon," leave the game
+  unpinned and say so — an invented 14:00 is still invented.
+- **Don't warm travel, and don't verify feasibility.** The day already happened; a simulator's
+  opinion about whether it fits changes nothing, and `warm_travel` is the one tool that spends
+  external travel budget. Call `evaluate_schedule` / `warm_travel` on a past trip only if the
+  user explicitly asks for travel times or a retrospective ("how much of that day was driving?").
+- **Book what they played, and omit `sendInvite`.** Mark each room they actually played with
+  `book_game`, recording what it cost (`bookingPriceCents` + `bookingCurrency`) if they track
+  spend. Leave `sendInvite` out: nobody needs a calendar invite to an evening they already spent,
+  and the server's own suppression is a backstop, not a licence — it only kicks in once a date is
+  a full day behind UTC, so a trip that ended yesterday can still mail real invites to real
+  people. When something clearly older is booked with `sendInvite: true` anyway, the booking
+  still succeeds and the response reports the suppression as `emailError: "Past date - calendar
+  invites skipped"` — that is the expected outcome, not a failure, so report the booking as done.
+- **Replanning is a different tool.** "Let's do that trip again next year" is `copy_trip`, which
+  builds a NEW trip at new dates from the old one's pool (`mode: "games"`) or its whole layout
+  (`mode: "layout"`) — never edit the record of what happened into next year's plan. Reserve
+  `shift_trip_dates` for moving the recorded trip itself, when it was filed under the wrong dates:
+  it carries the recorded times along as unconfirmed predictions, but it fails while any game on
+  the trip is booked. **Unbooking to clear that is destructive** — `unbook_game` deletes every
+  payment recorded on the game (all of `costs[]`, not just the first), and on a Splitwise-linked
+  trip it deletes the linked expenses too, which re-booking recreates as new ones. So read each
+  game's `costs[]` off `list_days` and write the amounts down first, unbook, shift, re-book, and
+  restore every payment (`bookingPriceCents` on `book_game` for the first, `add_booking_cost` for
+  the rest). If that is more than the user bargained for, say so before touching anything — a
+  mis-dated record they can live with beats losing what it cost.
+
+### A recorded day, end to end
+
+> "Add the Portland day from last month — we did Cabin in the Woods at 10, then The Vault at
+> 1:30. The Vault was $140 for the four of us."
+
+1. `list_trips` → the Portland trip's `endDate` is `2026-06-14`, before today, so this is
+   recording: no intake, no booking-order talk.
+2. `get_trip_summary` `{tripId}` → the day `2026-06-13` exists and both rooms are already in the
+   pool but unscheduled. Note their `gameId`s and the `dayId`.
+3. `schedule_game` `{tripId, dayId, gameIds: [<cabin>, <vault>]}` → two `scheduledGameIds`.
+4. `set_game_slots` `{tripId, gameId: <cabin>, date: "2026-06-13", times: ["10:00"]}`, and again
+   for the Vault with `times: ["13:30"]`. Those times are now real slots on that date.
+5. `pin_time` each scheduled game to its recorded time: `{tripId, scheduledGameId: <cabin sg>,
+   time: "10:00"}`, then `{tripId, scheduledGameId: <vault sg>, time: "13:30"}`.
+6. `book_game` `{tripId, scheduledGameId: <vault sg>, bookingPriceCents: 14000,
+   bookingCurrency: "USD"}` → booked, with no invite mailed (no `sendInvite` passed).
+
+Every call carries `tripId`; it is required on all of these, and omitting it fails the call.
+
+No `evaluate_schedule`, no `warm_travel`, no intake questions. Present it back as what it is: a
+record of the day, with anything the user didn't remember left blank rather than filled in.
+
+**Nothing in Skeleton Key yet?** Same flow, two steps earlier: `create_trip` with the dates the
+trip actually ran (past dates are accepted, and the days are generated from them), then
+`add_game` per room — `search_escape_rooms` first if you need the `mortyGameId`, which fills in
+the venue and duration — and pick up at step 3 above.
 
 ## If the tools aren't connected
 
@@ -345,3 +446,5 @@ is missing.
 | Dropping tourism without a word because rooms filled the days | Surface the tradeoff with a named, priced alternative |
 | Treating a lodging pin as the fixed center of gravity | Lodging placed before key facts land is provisional — say so in placement reasoning |
 | Smoothing a lumpy slot grid into a tidy fake schedule | Report the real gaps, late finishes, and tight transfers as flags |
+| Running the intake (or booking-order advice) on a trip that already ended | Compare `endDate` to today first — a past trip gets recorded, not planned |
+| Re-warming travel over and over on an `indeterminate` day | Once `warm_travel` reports the legs `unwarmable`, accept the verdict and flag the transit legs |
