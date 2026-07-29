@@ -327,9 +327,9 @@ rooms) — a guide for ordering, never an override of a stated priority or of re
 - `list_games` — the schedulable pool; hides cut games by default (pass `includeCut` to audit
   what was set aside — see Cut games).
 - `list_game_slots` — the only legitimate source of pinnable times.
-- `set_game_slots` / `add_game_slot` — write times the user tells you (a whole date at once, or
-  one time) onto any date inside the trip window, past dates included. The only writable slot
-  source; provider-imported times are read-only.
+- `set_game_availability` — record availability the user gives you (or you observed) for a date: a
+  verdict (`available` with its open/sold-out `slots`, or `sold_out`/`closed`) on any date inside
+  the trip window, past dates included. The writable layer; provider-imported times are read-only.
 - `list_game_comments` — honor member intent (see Comments).
 - `evaluate_schedule` / `warm_travel` — the required verification pair (see Verify).
 - `list_days` / `get_trip_summary` — review the interleaved schedule and per-day load.
@@ -366,12 +366,13 @@ Once the trip is past:
   about a room they already played.
 - **Record the real times, then pin them.** No availability import runs for a trip that is over,
   and projections are never generated for a past date, so what the user remembers (or has in
-  their confirmation emails) is the only source of times. Write those times with `set_game_slots`
-  (the whole date at once: `times: ["10:00", "13:30"]`) or `add_game_slot` (one at a time), then
-  `pin_time` the scheduled game to the slot you just recorded. That is how "pin only real times"
-  stays satisfiable here: a recorded time is a real time, it just came from the user instead of
-  the venue's booking page. If they only remember "sometime that afternoon," leave the game
-  unpinned and say so — an invented 14:00 is still invented.
+  their confirmation emails) is the only source of times. Record them with `set_game_availability`
+  — `{date, status: "available", slots: [{time: "10:00", available: true}, ...]}` — then `pin_time`
+  the scheduled game to a time you just recorded. That is how "pin only real times" stays
+  satisfiable here: a recorded time is a real time, it just came from the user instead of the
+  venue's booking page (the room was available then; a past date reads as historical). If they only
+  remember "sometime that afternoon," leave the game unpinned and say so — an invented 14:00 is
+  still invented.
 - **Don't warm travel, and don't verify feasibility.** The day already happened; a simulator's
   opinion about whether it fits changes nothing, and `warm_travel` is the one tool that spends
   external travel budget. Call `evaluate_schedule` / `warm_travel` on a past trip only if the
@@ -407,8 +408,9 @@ Once the trip is past:
 2. `get_trip_summary` `{tripId}` → the day `2026-06-13` exists and both rooms are already in the
    pool but unscheduled. Note their `gameId`s and the `dayId`.
 3. `schedule_game` `{tripId, dayId, gameIds: [<cabin>, <vault>]}` → two `scheduledGameIds`.
-4. `set_game_slots` `{tripId, gameId: <cabin>, date: "2026-06-13", times: ["10:00"]}`, and again
-   for the Vault with `times: ["13:30"]`. Those times are now real slots on that date.
+4. `set_game_availability` `{tripId, gameId: <cabin>, date: "2026-06-13", status: "available",
+   slots: [{time: "10:00", available: true}]}`, and again for the Vault with `[{time: "13:30",
+   available: true}]`. Those times are now real, confirmed slots on that date.
 5. `pin_time` each scheduled game to its recorded time: `{tripId, scheduledGameId: <cabin sg>,
    time: "10:00"}`, then `{tripId, scheduledGameId: <vault sg>, time: "13:30"}`.
 6. `book_game` `{tripId, scheduledGameId: <vault sg>, bookingPriceCents: 14000,
