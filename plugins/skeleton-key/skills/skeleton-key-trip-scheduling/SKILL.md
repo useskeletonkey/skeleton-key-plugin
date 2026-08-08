@@ -177,6 +177,12 @@ honestly shows rough edges.
   to protect the space, use a clearly-labeled **hold** inside that window ("HOLD — window, not a
   slot; contact venue") — a hold reserves room in the day; it is never presented as a bookable
   time.
+- **A slot after midnight is a real slot.** Athens venues in particular run a nightly
+  17:00 / 19:30 / 22:00 / 00:30 pattern and sell that last one as part of the evening
+  ("00:30 +1"). Pin it on the day whose evening it belongs to, with `dayOffset: 1` — a 00:30
+  session ending Friday's outing is `time: "00:30", dayOffset: 1` on **Friday**. Putting it on
+  Saturday instead is the mistake to avoid: it lands before Saturday's breakfast, and the drive
+  gets measured from the hotel rather than from the venue the group is actually leaving.
 - Anything outside Skeleton Key's data (train schedules, flight times the user hasn't provided)
   is a guess — present it as "verify against the carrier," never as a settled time.
 - Real slots are lumpy. They leave awkward midday gaps, force late finishes, fail to chain
@@ -370,7 +376,7 @@ Once the trip is past:
   — `{date, status: "available", slots: [{time: "10:00", available: true}, ...]}` — then `pin_time`
   the scheduled game to a time you just recorded. That is how "pin only real times" stays
   satisfiable here: a recorded time is a real time, it just came from the user instead of the
-  venue's booking page (the room was available then; a past date reads as historical). If they only
+  venue's booking page (the room was available then; list_game_availability reports such a date by its data rather than as 'historical', having no local clock to judge past-ness). If they only
   remember "sometime that afternoon," leave the game unpinned and say so — an invented 14:00 is
   still invented.
 - **Don't warm travel, and don't verify feasibility.** The day already happened; a simulator's
