@@ -57,7 +57,12 @@ to memory.
 2. **Arrival & departure**: times and delay risk (see the arrival rule for what raises risk).
 3. **Region geography**: which venues cluster into which areas; travel times between them.
 4. **Venue operating hours** — they set the earliest feasible start each day; a constraint, not
-   a preference.
+   a preference. But they are the *weakest* source in this list: escape-room hours are sparse and
+   stale on Google, especially outside the US, and a venue will often open a listed-closed day for
+   a booked group. Slot data for a specific date always outranks them, and a listed-closed day with
+   no slot data is a "confirm with the venue" flag, never a reason to rule the day out. This is why
+   `evaluate_schedule` reports hours as `openingHoursAdvisories` and never scores a day infeasible
+   on them.
 5. **Per-room priority and popularity** — needed for placement and booking order. Priority is
    the user's call; `bookingPressure` on `list_games` is the data-driven popularity/scarcity read
    that feeds booking order (see Booking order).
