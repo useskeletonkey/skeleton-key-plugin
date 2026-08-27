@@ -47,6 +47,18 @@ Two principles frame everything below:
 8. **Booking order**, when it comes up: priority × scarcity, after asking the booking-risk
    question (a just-in-time question, not part of intake).
 
+### Multi-track gate
+
+Use tracks if and only if the group splits into separate parallel named
+itineraries. If the same room or session appears in multiple tracks, fan-out
+requires independently bookable physical units; player capacity never
+authorizes another copy. A one-off sit-out uses `toggle_player`, different
+arrival days are not tracks, and most trips should have zero tracks.
+When this test passes, read the
+[multi-track planning guide](references/multi-track-planning-guide.md) (or
+fetch the `multi_track_planning_guide` tool chapter) before creating or
+evaluating tracks.
+
 ## Step 1 — Trip facts
 
 Facts about this trip, not preferences about the user. Collect before scheduling; never persist
@@ -300,7 +312,9 @@ in?"). Don't un-cut a game yourself; flag it and let the user decide.
 - Single base when the region is compact; when the trip spans regions, move lodging to follow
   the play area, with luggage moves as their own evening blocks. Treat any lodging placed before
   key facts land (e.g. an unannounced event hotel) as provisional — don't over-optimize around it.
-- Keep a consistent team across a multi-part or campaign game.
+- When a trip is not using tracks, keep a consistent team across a multi-part
+  or campaign game. With tracks, keep the roster consistent within each named
+  track unless an item-level exception is intentional.
 - A room's advertised player minimum is usually soft — bookable under-strength for a fee, or
   fillable by recruiting where the context offers people (an organized event, a group chat).
   When a minimum exceeds the base team, still schedule it and surface the gap as a per-room flag
