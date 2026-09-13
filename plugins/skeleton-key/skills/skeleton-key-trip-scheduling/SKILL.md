@@ -194,6 +194,16 @@ honestly shows rough edges.
   to protect the space, use a clearly-labeled **hold** inside that window ("HOLD — window, not a
   slot; contact venue") — a hold reserves room in the day; it is never presented as a bookable
   time.
+- **A schedule you can extrapolate is a prediction, not a hold.** When the trip date isn't
+  released yet but the venue's booking page shows the same times every week for the weeks it
+  has posted (or the user tells you the schedule), record those times with
+  `set_game_availability` `status: "predicted"`. That writes them as unconfirmed, so the date
+  reads `predicted` in `list_game_availability` and shows as unconfirmed in the app, and you
+  can pin one like a projection: plan the room, don't book it, and say it's predicted. The
+  line between this and the fabricated time above is the evidence: a prediction is an
+  extrapolation from a posted schedule or the user's word; with neither, give a window.
+  Predictions are refused on a date that already has a verdict or provider availability -
+  there is nothing to predict there.
 - **A slot after midnight is a real slot.** Athens venues in particular run a nightly
   17:00 / 19:30 / 22:00 / 00:30 pattern and sell that last one as part of the evening
   ("00:30 +1"). Pin it on the day whose evening it belongs to, with `dayOffset: 1` — a 00:30
@@ -259,17 +269,20 @@ top-priority room off the schedule in favor of lesser ones is not. If a top-prio
 can't be placed (availability, geography, players), surface a flag rather than quietly dropping
 it.
 
-### Confirmed vs. projected — strictly from the slot's source
+### Confirmed vs. projected — from the slot's source and the date's state
 
 `source: "projected"` (and provisional slots) are read-only estimates for future dates the venue
 hasn't released — never generated for a date that has already passed, though one written while
-the date was still ahead can linger on a trip nothing refreshes any more. A provider name or
-`manual` is a real, bookable slot. Never infer "confirmed" from times merely appearing. Label
-every proposed time confirmed vs. projected. Projected rooms can be *planned* (place them, hold
-the space) but not *booked* — "not yet released" is a hard gate on booking order, independent of
-priority: book the confirmed scarce rooms now, and set the projected high-priority ones aside to
-book the moment availability opens. Don't downgrade a strong room for being projected — plan it,
-flag it pending.
+the date was still ahead can linger on a trip nothing refreshes any more. A provider name is a
+real, bookable slot. `manual` is bookable only when `list_game_availability` reports its date
+`available`: a hand-entered date can also be a `predicted` one (copied from another date, or
+recorded as an extrapolation - see Pin only real times), and the slot list can't tell those
+apart, so check the date. Never infer "confirmed"
+from times merely appearing. Label every proposed time confirmed vs. projected/predicted.
+Projected and predicted rooms can be *planned* (place them, hold the space) but not *booked* —
+"not yet released" is a hard gate on booking order, independent of priority: book the confirmed
+scarce rooms now, and set the projected high-priority ones aside to book the moment availability
+opens. Don't downgrade a strong room for being projected — plan it, flag it pending.
 
 ### Comments are first-class input
 
@@ -354,7 +367,9 @@ rooms) — a guide for ordering, never an override of a stated priority or of re
 - `list_game_slots` — the only legitimate source of pinnable times.
 - `set_game_availability` — record availability the user gives you (or you observed) for a date: a
   verdict (`available` with its open/sold-out `slots`, or `sold_out`/`closed`) on any date inside
-  the trip window, past dates included. The writable layer; provider-imported times are read-only.
+  the trip window, past dates included; or, for a date the venue hasn't released, the times you
+  expect it to run (`predicted`, unconfirmed - see Pin only real times). The writable layer;
+  provider-imported times are read-only.
 - `list_game_comments` — honor member intent (see Comments).
 - `evaluate_schedule` / `warm_travel` — the required verification pair (see Verify).
 - `list_days` / `get_trip_summary` — review the interleaved schedule and per-day load.
