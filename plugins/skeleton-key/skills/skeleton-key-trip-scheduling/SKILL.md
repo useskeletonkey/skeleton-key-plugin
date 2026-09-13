@@ -120,6 +120,11 @@ question.
 6. **Rest & tourism.** None, half-days, or full days? Should it scale with how far from home the
    destination is? [default: a half-day on trips of 4+ days, more when the destination is
    far-flung or unusual]
+7. **After a room.** Out the door the minute it opens, photos and a quick debrief (~15 min), or
+   a real afterchat with the staff (30+ min)? Any companies where that matters more, ones worth
+   a proper conversation? [default: 15 min; a named company gets 30+]
+   Groups differ enormously here (some chain rooms as tight as the slots allow, some plan the
+   trip around the conversations), so the number is theirs, and zero is as valid as 30.
 
 Late-night tolerance is implied by the chosen day shape; treat it as adjustable when a real late
 finish shows up. Booking risk is deliberately NOT asked here — ask it just-in-time when booking
@@ -136,6 +141,7 @@ Trip profile
 - Getting around: transit + rideshare only
 - Group: 2, open to recruiting for specific games
 - Rest & tourism: one museum half-day
+- After a room: 15 min; 30+ at No Exit and anywhere we've played before
 ```
 
 **Offer (never force) to save the confirmed profile to memory** so future trips can skip the
@@ -153,6 +159,7 @@ stays local; **durable** ("we never do late nights") updates the profile.
 | A day trends past the profile band and real rooms still fit | "Day 3 hits 6.5 h if we add X — keep or trim?" |
 | A late finish, or two late nights adjacent | "This ends ~11:30 pm, and so does tomorrow — OK, or restructure?" |
 | Slot grid squeezes a meal below the user's floor | "Real slots leave only 45 min for dinner — eat fast, or drop/move a room?" |
+| Slot grid leaves less after a room than the profile's post-game time | "Only 10 min after No Exit before the drive to X — cut the chat short, or take the 19:30 slot instead?" (the answer often names a company that deserves more; that's durable) |
 | A dense slate squeezes out tourism entirely | "No sightseeing fits this trip; trading [specific room] buys a half-day — worth it?" |
 | A room's player minimum exceeds the group | "Needs 4 — recruit, pay for empty slots, or drop?" |
 | First booking discussion | The booking-risk question: lock everything early, or book the `high`/`medium`-pressure ones and gamble on the `low`-pressure rest? |
@@ -172,6 +179,9 @@ short ones; count each experience's full duration, immersive/large-format includ
 is a consequence, not the target. Schedule long/immersive experiences within normal days rather
 than giving them a dedicated lighter day. Stack 5–6 rooms only at a single venue that supports
 back-to-back plays — never spread that many across scattered venues; travel kills it.
+Post-game time is not time inside games, so it stays out of the band, but it moves the finish
+(three rooms with 30-min afterchats end an hour and a half later than the room times suggest),
+so count it when judging a late finish.
 
 The band stretches for a top-priority room — a day exceeding the band to fit one more
 top-priority game is usually right, but flag the stretch and let the user call it. Balance a
@@ -221,9 +231,12 @@ honestly shows rough edges.
 
 `evaluate_schedule` is a stateless simulation — it runs on a scratch copy and persists nothing,
 so it is always safe to call, including in read-only contexts. Use it on every multi-room or
-day-trip day before presenting. Check: each start is a real slot; previous room's end + travel +
-buffer ≤ next start; the day's own transport (drive/train each way) is a real block, not
-ignored. Treat any verdict other than `feasible` / `feasible_provisional` as a day you must fix
+day-trip day before presenting. Check: each start is a real slot; previous room's end + the
+profile's post-game time + travel + buffer ≤ next start; the day's own transport (drive/train
+each way) is a real block, not ignored. The post-game term is yours to add: the simulator only
+knows about it when it has been written to the item as a break (see Geography and travel), so
+a chain that is `feasible` can still leave the group walking out of a room the minute it
+opens. Treat any verdict other than `feasible` / `feasible_provisional` as a day you must fix
 (move to other real slots or drop a room and flag it) — never fudge. On `indeterminate`
 (uncached travel legs), call `warm_travel` on the same draft and re-evaluate — once. Transit
 legs cannot be warmed, so when `warm_travel` comes back reporting those legs in `unwarmable` /
@@ -242,6 +255,16 @@ meal where the user will physically be, in a town or neighborhood with real opti
 day's route; this matters most on drive-heavy days through rural areas. Give a meal its own
 extended block only for genuine destination dining.
 
+### An existing schedule's gaps are not free slack
+
+When asked to review or tighten a schedule the user already built, the space after each room
+is part of what they built. Treat a `breakAfterMinutes` already on a game as intent, and never
+compress a post-game turnaround below the profile's number without saying so. A "more
+efficient" version that fits another room by cutting the afterchat at a company the user
+cares about has a cost; list it next to the gain ("fits The Vault, but leaves 9 min after No
+Exit instead of 30") and let the user choose. If no profile exists yet, the intake comes
+first, exactly as it does for a schedule built from scratch.
+
 ### Geography and travel
 
 - A room's real location is the source of truth — resolve each room to its actual venue address
@@ -252,7 +275,17 @@ extended block only for genuine destination dining.
 - Default 15-min buffer between venues on top of travel time (the trip's `travel_buffer_minutes`
   setting; adjust via `update_trip` if the user wants more slack). One item that needs more
   than that - an airport, a timed-entry museum - gets its own `travelBufferOverride` on the
-  game or activity being arrived at, not a higher trip-wide default.
+  game or activity being arrived at, not a higher trip-wide default. Two items at the same
+  venue get no buffer at all (the leg between them is zero minutes), so on a single-venue
+  back-to-back day the only space between rooms is the profile's post-game time.
+- The travel buffer is arrival-side slack on the leg in. Time after a room (photos, debrief,
+  talking to the staff) is the profile's post-game answer and comes off the previous room's
+  end before travel starts; the two never substitute for each other. Keep the profile default
+  in your own arithmetic, and write it onto the scheduled game as `breakAfterMinutes` with a
+  `breakAfterLabel` like "Post-game chat" only where it exceeds the default (a company the
+  user named, a longer answer to a just-in-time question), so the app's estimated times match
+  the plan there without every card growing a break. A zero-minute profile writes nothing and
+  chains rooms as tight as the slots allow.
 - Respect the profile's getting-around answer: travel mode is per leg in Skeleton Key
   (`drive | walk | cycle | transit`), so set each scheduled leg's mode to match — transit-only
   users get `transit`/`walk` legs (model rideshare as `drive` where transit can't work, and say
@@ -360,7 +393,8 @@ rooms) — a guide for ordering, never an override of a stated priority or of re
 - `add_cluster` — encode geographic day-groupings (remember: address beats cluster).
 - `schedule_game` / `move_game` / `pin_time` — lay rooms onto days; pin only real slot times.
 - `update_scheduled_game` / `update_activity` — per-item `travelMode` and `travelBufferOverride`
-  to match the profile (the airport buffer lives on the flight activity).
+  to match the profile (the airport buffer lives on the flight activity); `breakAfterMinutes` +
+  `breakAfterLabel` on a game for post-game time above the profile default.
 - `add_activity` — meals, tourism, transport, and rest as first-class items; use `isTravel` +
   `transitMode` (`flight`/`train`/`ferry`/`bus`/`other`) for inter-city legs.
 - `set_endpoint` — arrival/departure; keep a high-risk arrival day empty.
@@ -491,5 +525,6 @@ is missing.
 | Dropping tourism without a word because rooms filled the days | Surface the tradeoff with a named, priced alternative |
 | Treating a lodging pin as the fixed center of gravity | Lodging placed before key facts land is provisional — say so in placement reasoning |
 | Smoothing a lumpy slot grid into a tidy fake schedule | Report the real gaps, late finishes, and tight transfers as flags |
+| Tightening (or padding) the time after a room without checking the profile | Post-game time is a dial: ask at intake and just-in-time; zero is as valid as 30, and a gap the user built in is theirs |
 | Running the intake (or booking-order advice) on a trip that already ended | Compare `endDate` to today first — a past trip gets recorded, not planned |
 | Re-warming travel over and over on an `indeterminate` day | Once `warm_travel` reports the legs `unwarmable`, accept the verdict and flag the transit legs |
