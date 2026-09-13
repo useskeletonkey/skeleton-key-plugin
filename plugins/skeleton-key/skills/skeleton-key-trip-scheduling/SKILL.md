@@ -250,7 +250,9 @@ extended block only for genuine destination dining.
 - Cluster each day's rooms geographically. On travel-heavy days build the day as an explicit
   chain: travel → room → meal-in-town → travel → room. Inter-city transport gets its own block.
 - Default 15-min buffer between venues on top of travel time (the trip's `travel_buffer_minutes`
-  setting; adjust via `update_trip` if the user wants more slack).
+  setting; adjust via `update_trip` if the user wants more slack). One item that needs more
+  than that - an airport, a timed-entry museum - gets its own `travelBufferOverride` on the
+  game or activity being arrived at, not a higher trip-wide default.
 - Respect the profile's getting-around answer: travel mode is per leg in Skeleton Key
   (`drive | walk | cycle | transit`), so set each scheduled leg's mode to match — transit-only
   users get `transit`/`walk` legs (model rideshare as `drive` where transit can't work, and say
@@ -357,7 +359,8 @@ rooms) — a guide for ordering, never an override of a stated priority or of re
   `mode: "layout"` for the whole day-by-day itinerary shifted onto the new dates.
 - `add_cluster` — encode geographic day-groupings (remember: address beats cluster).
 - `schedule_game` / `move_game` / `pin_time` — lay rooms onto days; pin only real slot times.
-- `update_scheduled_game` — per-leg `travelMode` and buffer overrides to match the profile.
+- `update_scheduled_game` / `update_activity` — per-item `travelMode` and `travelBufferOverride`
+  to match the profile (the airport buffer lives on the flight activity).
 - `add_activity` — meals, tourism, transport, and rest as first-class items; use `isTravel` +
   `transitMode` (`flight`/`train`/`ferry`/`bus`/`other`) for inter-city legs.
 - `set_endpoint` — arrival/departure; keep a high-risk arrival day empty.
