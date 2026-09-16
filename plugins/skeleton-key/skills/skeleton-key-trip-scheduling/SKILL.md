@@ -66,7 +66,8 @@ to memory.
 
 1. **Anchor event?** Organized tour or convention (e.g. a Room Escape Artist tour)? Reserve its
    dates as fixed and empty — schedule around them, never into them.
-2. **Arrival & departure**: times and delay risk (see the arrival rule for what raises risk).
+2. **Arrival & departure**: when the group is free to leave the arrival point and must be at
+   the departure point (not the flight times), plus delay risk (see the arrival rule).
 3. **Region geography**: which venues cluster into which areas; travel times between them.
 4. **Venue operating hours** — they set the earliest feasible start each day; a constraint, not
    a preference. But they are the *weakest* source in this list: escape-room hours are sparse and
@@ -345,13 +346,21 @@ in?"). Don't un-cut a game yourself; flag it and let the user decide.
 
 ### Arrival, departure, and city changes
 
+- **Endpoint times are already buffered.** The trip's `arrival.time` is when the group is
+  actually free to leave the arrival location (landed, bags collected, rental car in hand);
+  `departure.time` is when the group must already be standing at the departure location
+  (check-in and security included). Neither is the flight's scheduled time, and the flight's own
+  times live only in the endpoint's notes. Schedule right up to these times: the first game may
+  start as soon as travel from the arrival point allows, and the last game may end as late as
+  travel to the departure point allows. Never subtract a deplaning or check-in buffer from an
+  endpoint time on top of that.
 - **Arrival day:** gate on arrival time + delay risk, not on it being "the arrival day." Risk
   rises with long-haul/international flights, connections, overnight or last-flight arrivals,
   weather-prone seasons/airports, and slackless itineraries; the real test is whether a delay
   would blow up a booked room. High risk or late arrival → book nothing. Low-risk early arrival →
   building an afternoon around it is fine.
-- **Departure day:** early/midday flight → empty. Late-afternoon flight → a tight 1–3 room
-  morning cluster ending before the flight, with an airport buffer confirmed for that airport.
+- **Departure day:** early/midday departure time → empty. Late-afternoon departure time → a
+  tight 1–3 room morning cluster ending, after travel, by `departure.time`.
 - **Mid-trip city change:** you can only play where you physically are — give the transport its
   own block and cluster that day's rooms around it.
 
@@ -397,7 +406,8 @@ rooms) — a guide for ordering, never an override of a stated priority or of re
   `breakAfterLabel` on a game for post-game time above the profile default.
 - `add_activity` — meals, tourism, transport, and rest as first-class items; use `isTravel` +
   `transitMode` (`flight`/`train`/`ferry`/`bus`/`other`) for inter-city legs.
-- `set_endpoint` — arrival/departure; keep a high-risk arrival day empty.
+- `set_endpoint` — arrival/departure with already-buffered times (when the group is free to
+  leave / must be there, not the flight's times); keep a high-risk arrival day empty.
 - `book_game` — commit in priority × scarcity order.
 - `list_games` — the schedulable pool; hides cut games by default (pass `includeCut` to audit
   what was set aside — see Cut games).
