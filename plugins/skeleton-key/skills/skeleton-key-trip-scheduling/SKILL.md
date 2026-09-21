@@ -403,7 +403,8 @@ rooms) — a guide for ordering, never an override of a stated priority or of re
 - `schedule_game` / `move_game` / `pin_time` — lay rooms onto days; pin only real slot times.
 - `update_scheduled_game` / `update_activity` — per-item `travelMode` and `travelBufferOverride`
   to match the profile (the airport buffer lives on the flight activity); `breakAfterMinutes` +
-  `breakAfterLabel` on a game for post-game time above the profile default.
+  `breakAfterLabel` on a game or activity for post-game time above the profile default, and for
+  the break after the day's last item.
 - `add_activity` — meals, tourism, transport, and rest as first-class items; use `isTravel` +
   `transitMode` (`flight`/`train`/`ferry`/`bus`/`other`) for inter-city legs.
 - `set_endpoint` — arrival/departure with already-buffered times (when the group is free to
