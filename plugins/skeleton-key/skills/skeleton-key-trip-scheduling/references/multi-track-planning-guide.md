@@ -54,9 +54,9 @@ The roster is ground truth. Omitted players on a default item mean the eligible
 whole-group default; an explicit empty roster means nobody attends. A pending
 track is not an empty track with an active interpretation. Guests can attend
 through the existing item invitation flow, but do not put guests into the
-track baseline. Linked games in a target trip are read-only lenses: they may
-carry a target-local track label, but never import source-trip people, costs,
-booking units, or authorization into the target.
+track baseline. A linked game (a game scheduled in another trip and shown
+read-only here) is never on a track: the members of this trip who play it in
+its source trip carry it, and its costs and booking stay in the source trip.
 
 ## Evaluate before committing
 
