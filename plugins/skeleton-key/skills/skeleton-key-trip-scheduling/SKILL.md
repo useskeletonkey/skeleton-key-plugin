@@ -244,10 +244,13 @@ knows about it when it has been written to the item as a break (see Geography an
 a chain that is `feasible` can still leave the group walking out of a room the minute it
 opens. Treat any verdict other than `feasible` / `feasible_provisional` as a day you must fix
 (move to other real slots or drop a room and flag it) — never fudge. On `indeterminate`
-(uncached travel legs), call `warm_travel` on the same draft and re-evaluate — once. Transit
+(uncached travel legs), call `warm_travel` on the same draft and re-evaluate — once (one more
+warm if it reports `failedPairs`). Transit
 legs cannot be warmed, so when `warm_travel` comes back reporting those legs in `unwarmable` /
 `unwarmablePairs`, the verdict will stay `indeterminate` no matter how many times you re-run it:
-accept it, present the day with its transit legs flagged as unverified, and move on. Never loop
+accept it, present the day with its transit legs flagged as unverified, and move on. Legs in
+`failed` / `failedPairs` are ones the warm could not fetch. A second call can pick up legs the
+first ran out of time for; treat a leg as unwarmable only after it fails twice. Never loop
 warm-then-evaluate on legs the tool already told you it can't warm. It does not check player
 minimums — that arithmetic is yours.
 
