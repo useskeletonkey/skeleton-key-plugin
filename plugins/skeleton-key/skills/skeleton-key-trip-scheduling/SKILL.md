@@ -250,7 +250,9 @@ legs cannot be warmed, so when `warm_travel` comes back reporting those legs in 
 `unwarmablePairs`, the verdict will stay `indeterminate` no matter how many times you re-run it:
 accept it, present the day with its transit legs flagged as unverified, and move on. Legs in
 `failed` / `failedPairs` are ones the warm could not fetch. A second call can pick up legs the
-first ran out of time for; treat a leg as unwarmable only after it fails twice. Never loop
+first ran out of time for; treat a leg as unwarmable only after it fails twice. Legs in
+`invalid` / `invalidPairs` start or end at a place whose stored latitude/longitude is out of
+range: retrying won't help, so fix that place's coordinates and evaluate again. Never loop
 warm-then-evaluate on legs the tool already told you it can't warm. It does not check player
 minimums — that arithmetic is yours.
 
