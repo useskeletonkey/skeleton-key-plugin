@@ -246,17 +246,19 @@ knows about it when it has been written to the item as a break (see Geography an
 a chain that is `feasible` can still leave the group walking out of a room the minute it
 opens. Treat any verdict other than `feasible` / `feasible_provisional` as a day you must fix
 (move to other real slots or drop a room and flag it) — never fudge. On `indeterminate`
-(uncached travel legs), call `warm_travel` on the same draft and re-evaluate — once (one more
-warm if it reports `failedPairs`). Transit
-legs cannot be warmed, so when `warm_travel` comes back reporting those legs in `unwarmable` /
-`unwarmablePairs`, the verdict will stay `indeterminate` no matter how many times you re-run it:
-accept it, present the day with its transit legs flagged as unverified, and move on. Legs in
-`failed` / `failedPairs` are ones the warm could not fetch. A second call can pick up legs the
-first ran out of time for; treat a leg as unwarmable only after it fails twice. Legs in
-`invalid` / `invalidPairs` start or end at a place whose stored latitude/longitude is out of
-range: retrying won't help, so fix that place's coordinates and evaluate again. Never loop
-warm-then-evaluate on legs the tool already told you it can't warm. It does not check player
-minimums — that arithmetic is yours.
+(uncached travel legs), call `warm_travel` on the same draft and re-evaluate. Transit legs are
+looked up per date, so a transit leg you move to another day can come back uncached; the warm
+fetches it for that day. Legs in `failed` / `failedPairs` are still uncached, and each says why:
+
+- `rate_limited` — the budget is busy. Wait `retryAfterSeconds`, then call `warm_travel` again.
+- `out_of_time` — the call's 20 seconds ran out first. Call `warm_travel` again now.
+- `provider_failed` — the travel provider failed for that leg. This is the only reason that
+  counts against a leg: after it fails this way twice, accept the `indeterminate` verdict,
+  present the day with that leg flagged as unverified, and move on.
+
+Legs in `invalid` / `invalidPairs` start or end at a place whose stored latitude/longitude is out
+of range: retrying won't help, so fix that place's coordinates and evaluate again. Never loop
+warm-then-evaluate past those rules. It does not check player minimums — that arithmetic is yours.
 
 ### Meals are schedule items, not leftovers
 
@@ -571,4 +573,4 @@ is missing.
 | Smoothing a lumpy slot grid into a tidy fake schedule | Report the real gaps, late finishes, and tight transfers as flags |
 | Tightening (or padding) the time after a room without checking the profile | Post-game time is a dial: ask at intake and just-in-time; zero is as valid as 30, and a gap the user built in is theirs |
 | Running the intake (or booking-order advice) on a trip that already ended | Compare `endDate` to today first — a past trip gets recorded, not planned |
-| Re-warming travel over and over on an `indeterminate` day | Once `warm_travel` reports the legs `unwarmable`, accept the verdict and flag the transit legs |
+| Re-warming travel over and over on an `indeterminate` day | Once a leg has come back `provider_failed` twice, accept the verdict and flag that leg; `rate_limited` and `out_of_time` only mean wait or call again |
