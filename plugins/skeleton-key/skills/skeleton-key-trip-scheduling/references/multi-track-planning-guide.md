@@ -13,6 +13,10 @@ second way to describe trip membership, a player-capacity bucket inside one
 room, or an inferred subgroup that happens to emerge during planning. Different
 tracks may schedule different games. When they schedule the same room or
 session, each copy must have its own independently bookable physical unit.
+A venue that doesn't list its rooms leaves the app unable to check this, so a
+second copy at the same time is allowed with a `no_reliable_multiplicity`
+warning instead of blocked. Place one only when the user confirms the venue
+runs a twin copy of the room.
 
 Use a track when two or more groups need to move through separate itineraries
 in parallel, perhaps with shared meals or regrouping points between those

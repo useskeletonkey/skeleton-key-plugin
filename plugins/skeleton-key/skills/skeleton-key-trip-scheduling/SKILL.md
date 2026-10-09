@@ -52,7 +52,9 @@ Two principles frame everything below:
 Use tracks if and only if the group splits into separate parallel named
 itineraries. If the same room or session appears in multiple tracks, fan-out
 requires independently bookable physical units; player capacity never
-authorizes another copy. A one-off sit-out uses `toggle_player`, different
+authorizes another copy (at a venue that doesn't list its rooms, the app only
+warns, so place a second copy only when the user confirms a twin room). A
+one-off sit-out uses `toggle_player`, different
 arrival days are not tracks, and most trips should have zero tracks.
 When this test passes, read the
 [multi-track planning guide](references/multi-track-planning-guide.md) (or
