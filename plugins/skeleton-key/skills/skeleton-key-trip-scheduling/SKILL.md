@@ -334,12 +334,12 @@ Projected and predicted rooms can be *planned* (place them, hold the space) but 
 scarce rooms now, and set the projected high-priority ones aside to book the moment availability
 opens. Don't downgrade a strong room for being projected — plan it, flag it pending.
 
-A game whose `bookingSource.rejected` is `true` on `list_games` has a booking site that no
-longer lists the room: what it imported is frozen at the last import the site answered, so
-don't book from it, and tell the user to reconnect that game's booking source in the app (or
-check the venue's site). What the group recorded still stands: on `list_game_availability`, a
-date with `confirmed: true` keeps its state, and a date's `manualOpen` times still stand,
-unconfirmed unless the date is confirmed.
+A game whose `bookingSource.rejected` is `true` (on `list_games` or `get_trip_summary`) has a
+booking site that no longer lists the room: what it imported is frozen at the last import the
+site answered, so don't book from it, and tell the user to reconnect that game's booking source
+in the app (or check the venue's site). What the group recorded still stands: on
+`list_game_availability`, a date with `confirmed: true` keeps its state, and a date's
+`manualOpen` times still stand, unconfirmed unless the date is confirmed.
 
 ### Comments are first-class input
 
