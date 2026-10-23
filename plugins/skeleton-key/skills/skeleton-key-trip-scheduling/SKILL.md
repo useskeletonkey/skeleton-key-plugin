@@ -261,8 +261,10 @@ nothing. Instead:
 `evaluate_schedule` is a stateless simulation — it runs on a scratch copy and persists nothing,
 so it is always safe to call, including in read-only contexts. Use it on every multi-room or
 day-trip day before presenting. It does the chain arithmetic: pass the profile's post-game time
-as `postGameBreakMinutes` on every candidate, and each move's `slackMinutes` is what's left
-after that break, travel and buffer (negative means late). A game that gets more than the
+as `postGameBreakMinutes` on every candidate (required; 0 for none), and each move's
+`slackMinutes` is what's left after that break, travel and buffer (negative means late). Before
+quoting any slack, check that the result's `postGameBreakMinutes` is the profile's post-game
+time. A game that gets more than the
 default (a company the user named) takes its own `breakAfterMinutes` on its draft item;
 a break already stored on a game carries
 into the draft. Check what it can't: each start is a real slot, and the day's own transport
