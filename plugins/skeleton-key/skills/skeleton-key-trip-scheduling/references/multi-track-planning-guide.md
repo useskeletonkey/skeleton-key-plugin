@@ -71,12 +71,14 @@ Items refer to that declaration by `trackKey`. Do not use a fake UUID for a
 candidate track, reference a track by persisted `trackId` from an item, or send
 both `playerIds` and `trackKey` on one item. Candidate evaluation is read-only.
 
-The detailed result is participant-carried. Prefer `participantEdges`,
-`participantTotals`, `trackEdges`, and `trackTotals` over reconstructing lanes
-from array order. The scalar verdict is conservative across carriers. Pending,
-unavailable, and no-route travel statuses remain distinct and unresolved travel
-does not become a conflict. Inspect `physicalSession` and booking-unit status
-per scheduled copy; do not aggregate player capacity into copy availability.
+Use each move's `participantIds` to distinguish lanes and the day's `tracks`
+for track verdicts and totals. Every day lists every candidate track, including
+an empty feasible lane. In standard detail, `track:<key>` appears only for that
+lane's own move when no member shares it. Pending, unavailable, and no-route
+move statuses remain distinct and unresolved travel does not become a violation.
+Request `detail: "full"` for per-participant timing and `physicalSession`;
+inspect booking-unit status per scheduled copy and do not aggregate player
+capacity into copy availability.
 
 ## Fairness is scratch analysis
 

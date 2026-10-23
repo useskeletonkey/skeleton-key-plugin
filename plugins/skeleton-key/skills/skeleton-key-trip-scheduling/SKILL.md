@@ -79,7 +79,7 @@ to memory.
    stale on Google, especially outside the US, and a venue will often open a listed-closed day for
    a booked group. Slot data for a specific date always outranks them, and a listed-closed day with
    no slot data is a "confirm with the venue" flag, never a reason to rule the day out. This is why
-   `evaluate_schedule` reports hours as `openingHoursAdvisories` and never scores a day infeasible
+   `evaluate_schedule` reports hours as `advisories` with type `opening_hours` and never scores a day infeasible
    on them.
 5. **Per-room priority and popularity** — needed for placement and booking order. Priority is
    the user's call; `bookingPressure` on `list_games` is the data-driven popularity/scarcity read
