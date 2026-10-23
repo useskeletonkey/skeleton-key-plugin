@@ -66,7 +66,9 @@ evaluating tracks.
 ## Step 1 — Trip facts
 
 Facts about this trip, not preferences about the user. Collect before scheduling; never persist
-to memory.
+to memory. One `get_trip_summary` call returns all of these: the pool with each game's per-date
+availability and comments, venues with hours, members, lodging and the current schedule. Don't
+call `list_games`, `list_game_availability` or `list_game_comments` per game to gather them.
 
 1. **Anchor event?** Organized tour or convention (e.g. a Room Escape Artist tour)? Its games may
    already be in the pool, often marked with a custom field or a cluster. Those are the tour's to
@@ -84,9 +86,10 @@ to memory.
    `evaluate_schedule` reports hours as `advisories` with type `opening_hours` and never scores a day infeasible
    on them.
 5. **Per-room priority and popularity** — needed for placement and booking order. Priority is
-   the user's call; `bookingPressure` on `list_games` is the data-driven popularity/scarcity read
-   that feeds booking order (see Booking order).
-6. **Game comments** — read them for every game with `commentCount > 0` (see Comments rule).
+   the user's call; `bookingPressure` on each game in `get_trip_summary` is the data-driven
+   popularity/scarcity read that feeds booking order (see Booking order).
+6. **Game comments** - read every game's `comments` in `get_trip_summary`, cut games included
+   (see Comments rule).
 7. **Custom fields** — when any game has `customFields` values, read what each field means (see
    Custom fields).
 
@@ -203,9 +206,9 @@ back-to-back unless the profile's day shape treats them as routine.
 The highest-stakes rule here: a schedule that looks bookable but isn't is worse than one that
 honestly shows rough edges.
 
-- Every pinned time must be an actual slot returned by `list_game_slots` (a provider-imported or
-  manually-entered slot), or a projected estimate labeled as such. **Never invent, round, or
-  nudge a time to make a day flow better.** If the real slots are 10:00 / 12:15 / 14:30, you may
+- Every pinned time must be an actual open time from the game's `availability` in
+  `get_trip_summary` (or `list_game_slots`), or a projected estimate labeled as such. **Never
+  invent, round, or nudge a time to make a day flow better.** If the real slots are 10:00 / 12:15 / 14:30, you may
   pin one of those and nothing else.
 - **No slot data at all** (venue not synced, no manual times): do not put a precise clock time in
   the itinerary — labeling a fabricated time "estimated" doesn't make it real. Give a target
@@ -218,7 +221,7 @@ honestly shows rough edges.
   released yet but the venue's booking page shows the same times every week for the weeks it
   has posted (or the user tells you the schedule), record those times with
   `set_game_availability` `status: "predicted"`. That writes them as unconfirmed, so the date
-  reads `predicted` in `list_game_availability` and shows as unconfirmed in the app, and you
+  reads `predicted` in the game's `availability` and shows as unconfirmed in the app, and you
   can pin one like a projection: plan the room, don't book it, and say it's predicted. The
   line between this and the fabricated time above is the evidence: a prediction is an
   extrapolation from a posted schedule or the user's word; with neither, give a window.
@@ -246,9 +249,10 @@ nothing. Instead:
 1. Sort rooms onto days first, with no clock times, from priority, area and the dates each room
    is open.
 2. Lay out one day with real slots (see Pin only real times), and send that day alone to
-   `evaluate_schedule` as a `days` candidate; the default `dayScope: "affected"` returns just
-   that day. When two or three slot choices or orders look plausible, send each as its own
-   candidate in the same call and choose from the verdicts.
+   `evaluate_schedule` as a `days` candidate with the profile's `postGameBreakMinutes`;
+   the default `dayScope: "affected"` returns just that day. When two or three slot choices
+   or orders look plausible, send each as its own candidate in the same call and choose
+   from the verdicts.
 3. Fix the day from the result before starting the next: another real slot, another order, or a
    room moved to a neighboring day (then evaluate that day too).
 
@@ -256,15 +260,15 @@ nothing. Instead:
 
 `evaluate_schedule` is a stateless simulation — it runs on a scratch copy and persists nothing,
 so it is always safe to call, including in read-only contexts. Use it on every multi-room or
-day-trip day before presenting. It does the chain arithmetic: each move's `slackMinutes` is
-what's left after travel and buffer (negative means late). Check what it can't: each start is a
-real slot; the day's own transport (drive/train each way) is a real block, not ignored; and the
-profile's post-game time fits in each move's slack. The simulator counts post-game time only
-when it has been written to the item as a break (see Geography and travel), and a `days` draft
-carries no breaks, so a chain that is `feasible` can still leave the group walking out of a room
-the minute it opens. Treat any verdict other than `feasible` / `feasible_provisional` as a day you
-must fix (move to other real slots or drop a room and flag it) — never fudge. On `indeterminate`
-(uncached travel legs), call `warm_travel` on the same draft and re-evaluate. Transit legs are
+day-trip day before presenting. It does the chain arithmetic: pass the profile's post-game time
+as `postGameBreakMinutes` on every candidate, and each move's `slackMinutes` is what's left
+after that break, travel and buffer (negative means late). A game that gets more than the
+default (a company the user named) takes its own `breakAfterMinutes` on its draft item;
+a break already stored on a game carries
+into the draft. Check what it can't: each start is a real slot, and the day's own transport
+(drive/train each way) is a real block, not ignored. Treat any verdict other than `feasible` /
+`feasible_provisional` as a day you must fix (move to other real slots or drop a room and
+flag it) - never fudge. On `indeterminate` (uncached travel legs), call `warm_travel` on the same draft and re-evaluate. Transit legs are
 looked up per date, so a transit leg you move to another day can come back uncached; the warm
 fetches it for that day. Legs in `failed` / `failedPairs` are still uncached, and each says why:
 
@@ -314,7 +318,8 @@ first, exactly as it does for a schedule built from scratch.
 - The travel buffer is arrival-side slack on the leg in. Time after a room (photos, debrief,
   talking to the staff) is the profile's post-game answer and comes off the previous room's
   end before travel starts; the two never substitute for each other. Keep the profile default
-  in your own arithmetic, and write it onto the scheduled game as `breakAfterMinutes` with a
+  off the trip (pass it to `evaluate_schedule` as `postGameBreakMinutes`), and write a break
+  onto the scheduled game as `breakAfterMinutes` with a
   `breakAfterLabel` like "Post-game chat" only where it exceeds the default (a company the
   user named, a longer answer to a just-in-time question), so the app's estimated times match
   the plan there without every card growing a break. A zero-minute profile writes nothing and
@@ -342,7 +347,7 @@ rather than quietly dropping it.
 `source: "projected"` (and provisional slots) are read-only estimates for future dates the venue
 hasn't released — never generated for a date that has already passed, though one written while
 the date was still ahead can linger on a trip nothing refreshes any more. A provider name is a
-real, bookable slot. `manual` is bookable only when `list_game_availability` reports its date
+real, bookable slot. `manual` is bookable only when the game's `availability` reports its date
 `available`: a hand-entered date can also be a `predicted` one (copied from another date, or
 recorded as an extrapolation - see Pin only real times), and the slot list can't tell those
 apart, so check the date. Never infer "confirmed"
@@ -355,17 +360,17 @@ opens. Don't downgrade a strong room for being projected — plan it, flag it pe
 A game whose `bookingSource.rejected` is `true` (on `list_games` or `get_trip_summary`) has a
 booking site that no longer lists the room: what it imported is frozen at the last import the
 site answered, so don't book from it, and tell the user to reconnect that game's booking source
-in the app (or check the venue's site). What the group recorded still stands: on
-`list_game_availability`, a date with `confirmed: true` keeps its state, and a date's
+in the app (or check the venue's site). What the group recorded still stands: in
+the game's `availability`, a date with `confirmed: true` keeps its state, and a date's
 `manualOpen` times still stand, unconfirmed unless the date is confirmed.
 
 ### Comments are first-class input
 
 Trip members leave freeform comments on games; they carry intent the structured fields don't.
-Find them via `commentCount` on `list_games`, then call `list_game_comments` for every game with
-count > 0 — including rooms you'd otherwise exclude, since a comment is often *why* a room is
-out or bumped. Build an explicit gameId → game name → comment table and re-verify each pairing
-before acting; mis-attributing a comment to the wrong game is a high-cost failure. Typical
+They sit under each game in `get_trip_summary`, cut games included. Read them even for rooms
+you'd otherwise exclude, since a comment is often *why* a room is out or bumped. A game with no
+visible comments omits `comments`; an unresolved author omits `authorName`. Keep each comment
+with its game: mis-attributing a comment to the wrong game is a high-cost failure. Typical
 readings: "already played" → exclude even at high priority; "must do / book first" → hard
 priority; "skip / only if time" → deprioritize; logistics notes ("needs 4," "do after dark,"
 "pairs with X") → fold into placement. When a comment conflicts with a structured field, the
@@ -375,12 +380,10 @@ say so.
 ### Cut games are out of the pool
 
 A **cut** game (`isCut: true`) is one the owner deliberately set aside — the structured
-equivalent of an "already played" comment. **Never schedule a cut game.** `list_games` hides cut
-games by default, so the pool you place from is already clean; `get_trip_summary` still lists
-them (labeled `isCut`) so you can see the whole pool. Once per session, do one
-`list_games` with `includeCut: true` to see what was cut and read those games' comments (the
-*why* often lives there) — and if something high-priority was cut, surface it rather than
-silently honoring it ("you've cut [room], a top-priority pick — intended, or should it go back
+equivalent of an "already played" comment. **Never schedule a cut game.** `get_trip_summary`
+lists cut games with `id`, `name`, `priority`, `isCut: true` and any comments (the *why* often
+lives there). Read them, and if something high-priority was cut, surface it rather than
+silently honoring it ("you've cut [room], a top-priority pick - intended, or should it go back
 in?"). Don't un-cut a game yourself; flag it and let the user decide.
 
 ### Custom fields mean what the members say they mean
@@ -436,7 +439,8 @@ guessing. Many trips have none. Don't create a field unless the user asks for on
 ### Booking order — when to commit, not the final grid
 
 Sequence bookings by **priority × scarcity**, not by date. Read the scarcity axis from
-`bookingPressure.tier` on `list_games` — a data-driven read of how hard each room is to book:
+`bookingPressure.tier` on each game in `get_trip_summary` - a data-driven read of how hard each
+room is to book:
 `high` (books solid weeks out, or barely runs) > `medium` (tightens only near-in) > `low`/none.
 (The app shows these to users as "hottest" / "hot" / no-tag, but the API returns `high`/`medium`/
 `low`.) Book high-priority + `high`-pressure rooms first — even before an anchor event's schedule
@@ -444,11 +448,13 @@ publishes (not the event's own games — the tour books those); let the trip bui
 anchors. Gamble on low-priority, `low`-pressure rooms per the user's booking-risk answer: leave
 them unbooked and squeeze them into gaps once the fixed schedule lands; a sellout is an
 acceptable loss for a low-priority room only if the user said so.
-`bookingPressure` is an estimate (carries a `confidence`; `null` for irregular or off-platform
-rooms) — a guide for ordering, never an override of a stated priority or of real availability.
+`bookingPressure` is an estimate (carries a `confidence`; omitted from the planning summary
+when unavailable) - a guide for ordering, never an override of a stated priority or of real
+availability.
 
 ## Operating the Skeleton Key tools
 
+- `get_trip_summary` - the one read to start from: pool, availability, comments, venues, schedule.
 - `create_trip` / `update_trip` — dates, region, travel buffer (15-min default). Past dates are
   allowed and mean recording (see Recording a trip that already happened).
 - `copy_trip` — run an old trip again at new dates: `mode: "games"` for the pool alone,
@@ -464,15 +470,16 @@ rooms) — a guide for ordering, never an override of a stated priority or of re
 - `set_endpoint` — arrival/departure with already-buffered times (when the group is free to
   leave / must be there, not the flight's times); keep a high-risk arrival day empty.
 - `book_game` — commit in priority × scarcity order.
-- `list_games` — the schedulable pool; hides cut games by default (pass `includeCut` to audit
-  what was set aside — see Cut games).
-- `list_game_slots` — the only legitimate source of pinnable times.
+- `list_games` - re-read the pool after a change; this returns the whole pool, not one game.
+  Cut games are hidden unless `includeCut: true`.
+- `list_game_availability` - re-read one game's per-date state after a change.
+- `list_game_slots` - one game's per-time detail; the summary already has per-date open times.
 - `set_game_availability` — record availability the user gives you (or you observed) for a date: a
   verdict (`available` with its open/sold-out `slots`, or `sold_out`/`closed`) on any date inside
   the trip window, past dates included; or, for a date the venue hasn't released, the times you
   expect it to run (`predicted`, unconfirmed - see Pin only real times). The writable layer;
   provider-imported times are read-only.
-- `list_game_comments` — honor member intent (see Comments).
+- `list_game_comments` - re-read one game's comments after a change (see Comments).
 - `list_custom_fields` — the trip's custom fields and what each means for planning (see Custom
   fields).
 - `set_custom_field` — set one field on one or more games, when the user asks or confirms a value
@@ -480,7 +487,7 @@ rooms) — a guide for ordering, never an override of a stated priority or of re
   to the game's list and a list replaces it.
 - `add_custom_field` — create a field, only when the user asks for one.
 - `evaluate_schedule` / `warm_travel` — the required verification pair (see Verify).
-- `list_days` / `get_trip_summary` — review the interleaved schedule and per-day load.
+- `list_days` - re-read the schedule after changes.
 
 In a read-only context ("propose, don't change anything"), the full workflow still applies:
 every `list_*`/`get_*` tool, `evaluate_schedule` (stateless), and `warm_travel` (cache-only) are
