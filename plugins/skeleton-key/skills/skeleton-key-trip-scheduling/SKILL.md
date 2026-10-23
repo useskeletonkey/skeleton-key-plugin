@@ -41,7 +41,9 @@ Two principles frame everything below:
 3. **Gather trip facts** (Step 1 below).
 4. **Establish the trip profile** (Step 2) — recall a saved one or run the intake. Do this
    BEFORE drafting any schedule, even a "rough" one.
-5. **Draft days**: profile dials + fixed methodology.
+5. **Draft days one at a time**: profile dials + fixed methodology. Sort rooms onto days, then lay
+   out and check each day with `evaluate_schedule` before starting the next (see "Draft one day
+   at a time").
 6. **Verify** every multi-room or day-trip day with `evaluate_schedule`; fix or flag, never fudge.
 7. **Present** with per-time provenance labels, tradeoff flags, and open questions.
 8. **Booking order**, when it comes up: priority × scarcity, after asking the booking-risk
@@ -235,17 +237,33 @@ honestly shows rough edges.
   "these four rooms only fit as 10:00, 12:15, 16:00, 19:00 — a 2.5 h midday gap and a ~21:30
   finish" is correct; a tidy fake is not.
 
+### Draft one day at a time
+
+Leave the timing arithmetic to `evaluate_schedule`. A week of start times, drives and finishes
+worked out in your reasoning can run past the reply's output limit, and then the user gets
+nothing. Instead:
+
+1. Sort rooms onto days first, with no clock times, from priority, area and the dates each room
+   is open.
+2. Lay out one day with real slots (see Pin only real times), and send that day alone to
+   `evaluate_schedule` as a `days` candidate; the default `dayScope: "affected"` returns just
+   that day. When two or three slot choices or orders look plausible, send each as its own
+   candidate in the same call and choose from the verdicts.
+3. Fix the day from the result before starting the next: another real slot, another order, or a
+   room moved to a neighboring day (then evaluate that day too).
+
 ### Verify every multi-room and day-trip day
 
 `evaluate_schedule` is a stateless simulation — it runs on a scratch copy and persists nothing,
 so it is always safe to call, including in read-only contexts. Use it on every multi-room or
-day-trip day before presenting. Check: each start is a real slot; previous room's end + the
-profile's post-game time + travel + buffer ≤ next start; the day's own transport (drive/train
-each way) is a real block, not ignored. The post-game term is yours to add: the simulator only
-knows about it when it has been written to the item as a break (see Geography and travel), so
-a chain that is `feasible` can still leave the group walking out of a room the minute it
-opens. Treat any verdict other than `feasible` / `feasible_provisional` as a day you must fix
-(move to other real slots or drop a room and flag it) — never fudge. On `indeterminate`
+day-trip day before presenting. It does the chain arithmetic: each move's `slackMinutes` is
+what's left after travel and buffer (negative means late). Check what it can't: each start is a
+real slot; the day's own transport (drive/train each way) is a real block, not ignored; and the
+profile's post-game time fits in each move's slack. The simulator counts post-game time only
+when it has been written to the item as a break (see Geography and travel), and a `days` draft
+carries no breaks, so a chain that is `feasible` can still leave the group walking out of a room
+the minute it opens. Treat any verdict other than `feasible` / `feasible_provisional` as a day you
+must fix (move to other real slots or drop a room and flag it) — never fudge. On `indeterminate`
 (uncached travel legs), call `warm_travel` on the same draft and re-evaluate. Transit legs are
 looked up per date, so a transit leg you move to another day can come back uncached; the warm
 fetches it for that day. Legs in `failed` / `failedPairs` are still uncached, and each says why:
@@ -312,9 +330,9 @@ first, exactly as it does for a schedule built from scratch.
 
 Days are the scarce resource. Fill them highest-priority-first, other than an anchor event's own
 games (see Step 1): don't burn a slot on a lower-priority room while a reachable top-priority
-room goes unscheduled. Actively place every confirmed top-priority room that has open slots — do
-the real slot arithmetic and pin a concrete time; don't leave a schedulable top-priority room as
-a vague "optional / if time" mention. Cutting a distant, low-availability cluster entirely is
+room goes unscheduled. Actively place every confirmed top-priority room that has open slots — pick
+a real slot, let `evaluate_schedule` confirm it fits, and pin a concrete time; don't leave a
+schedulable top-priority room as a vague "optional / if time" mention. Cutting a distant, low-availability cluster entirely is
 reasonable; leaving a nearby top-priority room off the schedule in favor of lesser ones is not.
 If a top-priority room truly can't be placed (availability, geography, players), surface a flag
 rather than quietly dropping it.
@@ -468,6 +486,9 @@ In a read-only context ("propose, don't change anything"), the full workflow sti
 every `list_*`/`get_*` tool, `evaluate_schedule` (stateless), and `warm_travel` (cache-only) are
 safe; present the proposal instead of writing it.
 
+The `scheduling_playbook` tool returns this same text. Once you have it (as this skill or from
+that tool), don't call it again.
+
 ## Recording a trip that already happened
 
 Not every trip is ahead of the user. Sometimes the trip is over and they want it written down —
@@ -571,6 +592,7 @@ is missing.
 | Mistake | Instead |
 |---|---|
 | Proposing a schedule on assumed pace ("I went with enthusiast intensity") | Run the intake first; the day-shape question is non-negotiable |
+| Working out the whole week's times in your reasoning before calling a tool | Sort rooms onto days, then draft and evaluate one day at a time |
 | A full day of games with no meal anywhere in it | Lunch + dinner are explicit blocks unless the profile says grab-and-go |
 | Precise clock times for venues with no slot data, "labeled as estimates" | A window from operating hours + a confirm-with-venue flag |
 | Two late finishes back-to-back because the slots happened to chain | Ask (JIT), or restructure — late-night spacing is a default, not an accident |
