@@ -363,6 +363,8 @@ in the app (or check the venue's site). What the group recorded still stands: in
 the game's `availability`, a date with `confirmed: true` keeps its state, and a date's
 `manualOpen` times still stand, unconfirmed unless the date is confirmed.
 
+`anotherGroupReportedMismatch: true` means another group found this booking site's times didn't match the venue's website, and this trip's imported times show nothing open from today on: the venue may have switched booking systems, so tell the user to check the venue's website before treating the game as not running.
+
 ### Comments are first-class input
 
 Trip members leave freeform comments on games; they carry intent the structured fields don't.
