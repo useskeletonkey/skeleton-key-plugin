@@ -5,5 +5,8 @@
   "author": {
     "name": "Skeleton Key"
   },
-  "homepage": "https://useskeletonkey.com/ai"
+  "homepage": "https://useskeletonkey.com/ai",
+  "license": "MIT",
+  "privacyPolicyUrl": "https://useskeletonkey.com/privacy",
+  "termsOfServiceUrl": "https://useskeletonkey.com/terms"
 }
