@@ -54,8 +54,9 @@ For a longer trip with parallel routes:
    unresolved reconciliation instead of claiming that the change was merely a
    label edit.
 
-The roster is ground truth. Omitted players on a default item mean the eligible
-whole-group default; an explicit empty roster means nobody attends. A pending
+Stored player rows are the roster for default and explicit items; an empty
+roster means nobody attends. Read `playerIds` from the item instead of inferring
+attendance from the current default party. A pending
 track is not an empty track with an active interpretation. Guests can attend
 through the existing item invitation flow, but do not put guests into the
 track baseline. A linked game (a game scheduled in another trip and shown
